@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Smart Link Builder — Plug & Play</title>
+
+<!-- CDN CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
+<style>
+  :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
+  body{background:#f6f7fb;padding:28px}
+  .card{max-width:980px;margin:16px auto;padding:20px;border-radius:12px;box-shadow:0 8px 30px rgba(20,24,40,0.06)}
+  .small-muted{font-size:.88rem;color:#6b7280}
+  .store-input{margin-bottom:8px}
+  .result-box{word-break:break-all;font-family:Menlo,monospace;background:#0f172a;color:#fff;padding:10px;border-radius:6px}
+  .hint{font-size:.86rem;color:#6b7280}
+  .badge-btn{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:8px;border:1px solid #e6e8ef;background:#fff}
+  .badge-btn img{height:22px}
+  .preview-badges{display:flex;gap:8px;flex-wrap:wrap}
+  footer.small{color:#94a3b8;margin-top:12px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h4 class="mb-1">Smart Link Builder — Plug & Play</h4>
+    <p class="small-muted">Add any store links. At least one required. Choose whether to publish as a self-contained link or as a short slug (requires one-time Google Apps Script setup).</p>
+
+    <div id="ui-builder">
+      <div class="mb-3">
+        <label class="form-label">Slug (optional — human friendly)</label>
+        <input id="slug" class="form-control" placeholder="example-app" />
+        <div class="hint mt-1">If you choose "Save to Slug" the slug must be unique. If empty we generate a timestamp name.</div>
+      </div>
+
+      <h6 class="mt-3">Store links (optional — add any)</h6>
+      <div class="row g-2">
+        <div class="col-md-6 store-input">
+          <input id="link-apple" class="form-control" placeholder="Apple App Store URL (iOS)" type="url" />
+        </div>
+        <div class="col-md-6 store-input">
+          <input id="link-google" class="form-control" placeholder="Google Play Store URL (Android)" type="url" />
+        </div>
+
+        <div class="col-md-6 store-input">
+          <input id="link-huawei" class="form-control" placeholder="Huawei AppGallery URL" type="url" />
+        </div>
+        <div class="col-md-6 store-input">
+          <input id="link-samsung" class="form-control" placeholder="Samsung Galaxy Store URL" type="url" />
+        </div>
+
+        <div class="col-md-6 store-input">
+          <input id="link-amazon" class="form-control" placeholder="Amazon Appstore URL" type="url" />
+        </div>
+        <div class="col-md-6 store-input">
+          <input id="link-microsoft" class="form-control" placeholder="Microsoft Store URL (Windows)" type="url" />
+        </div>
+
+        <div class="col-md-6 store-input">
+          <input id="link-apkpure" class="form-control" placeholder="APKPure / alternative APK URL" type="url" />
+        </div>
+        <div class="col-md-6 store-input">
+          <input id="link-web" class="form-control" placeholder="Website / Desktop fallback URL" type="url" />
+        </div>
+      </div>
+
+      <hr />
+
+      <h6>Optional UTM parameters (these will be appended to the destination)</h6>
+      <div class="row g-2">
+        <div class="col-sm-6 col-md-4"><input id="utm_source" class="form-control" placeholder="utm_source" /></div>
+        <div class="col-sm-6 col-md-4"><input id="utm_medium" class="form-control" placeholder="utm_medium" /></div>
+        <div class="col-sm-6 col-md-4"><input id="utm_campaign" class="form-control" placeholder="utm_campaign" /></div>
+        <div class="col-sm-6 col-md-4"><input id="utm_term" class="form-control" placeholder="utm_term" /></div>
+        <div class="col-sm-6 col-md-4"><input id="utm_content" class="form-control" placeholder="utm_content" /></div>
+      </div>
+
+      <hr />
+
+      <h6>Analytics (optional — third-party)</h6>
+      <p class="hint">Select analytics to inject on redirect so tracking is handled by the provider. Keeps metrics off your site.</p>
+
+      <div class="row g-2">
+        <div class="col-md-6">
+          <select id="analytics_type" class="form-select">
+            <option value="">None</option>
+            <option value="plausible">Plausible (domain)</option>
+            <option value="umami">Umami (script_url|website_id)</option>
+            <option value="ga4">Google Analytics (G-XXXX)</option>
+            <option value="custom">Custom script URL</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <input id="analytics_value" class="form-control" placeholder="Value: plausible domain or GA id or custom script URL" />
+        </div>
+      </div>
+
+      <hr />
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button id="btnSelf" class="btn btn-primary">Generate Self-contained Link</button>
+        <button id="btnSaveSlug" class="btn btn-success">Save to Slug (Google Sheet)</button>
+        <button id="btnExport" class="btn btn-outline-secondary">Export JSON</button>
+        <button id="btnImport" class="btn btn-outline-secondary">Import JSON</button>
+        <button id="btnClear" class="btn btn-outline-danger">Clear</button>
+      </div>
+
+      <div id="genArea" class="mt-4" style="display:none">
+        <h6>Generated public URL</h6>
+        <div class="result-box" id="finalUrl"></div>
+        <div class="mt-2">
+          <button id="copyBtn" class="btn btn-sm btn-light">Copy URL</button>
+          <button id="openBtn" class="btn btn-sm btn-outline-light">Open</button>
+          <button id="qrBtn" class="btn btn-sm btn-outline-secondary">Show QR</button>
+        </div>
+        <p class="mt-2 hint">Self-contained links are portable. For short slugs use "Save to Slug" (see below).</p>
+
+        <div id="qrArea" class="mt-2" style="display:none"></div>
+      </div>
+
+      <hr />
+
+      <h6>Saved configs (local backup)</h6>
+      <div id="savedList" class="mb-2"></div>
+      <small class="hint">Saved configs are stored in the browser. Export JSON to backup.</small>
+
+      <hr />
+
+      <h6>Optional: Apps Script endpoint (for short slugs)</h6>
+      <p class="hint">If you want short, clean slugs, deploy the provided Google Apps Script (one-time). Paste the Web App URL below.</p>
+      <div class="row g-2">
+        <div class="col-md-9">
+          <input id="appsScriptEndpoint" class="form-control" placeholder="https://script.google.com/macros/s/xxxxx/exec" />
+        </div>
+        <div class="col-md-3">
+          <button id="btnGuide" class="btn btn-outline-info w-100">Apps Script Setup Guide</button>
+        </div>
+      </div>
+
+      <footer class="small">Prebuilt store badges will be visible after generating a link (preview + redirect page).</footer>
+    </div>
+
+    <div id="ui-redirect" style="display:none">
+      <h5 id="redirectTitle">Redirecting…</h5>
+      <p id="redirectMsg" class="small-muted">If you are not redirected automatically, a manual link will be shown below.</p>
+      <div class="mt-2" id="previewBadges"></div>
+      <p class="mt-2"><a id="manualTarget" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">Open destination</a></p>
+    </div>
+
+  </div>
+
+<!-- CDN JS -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.11/dist/clipboard.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js" crossorigin="anonymous"></script>
+
+<script>
+/* ----------------------------------------
+  Utilities: base64url, storage helpers
+-----------------------------------------*/
+function b64urlEncode(str){
+  return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function b64urlDecode(s){
+  s = s.replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length % 4) s += '=';
+  try{ return decodeURIComponent(escape(atob(s))); }catch(e){ return null; }
+}
+
+function nowIso(){ return new Date().toISOString(); }
+
+function buildPayload(){
+  const stores = {
+    apple: $("#link-apple").val().trim(),
+    google: $("#link-google").val().trim(),
+    huawei: $("#link-huawei").val().trim(),
+    samsung: $("#link-samsung").val().trim(),
+    amazon: $("#link-amazon").val().trim(),
+    microsoft: $("#link-microsoft").val().trim(),
+    apkpure: $("#link-apkpure").val().trim(),
+    web: $("#link-web").val().trim()
+  };
+  const utms = {};
+  ["utm_source","utm_medium","utm_campaign","utm_term","utm_content"].forEach(k=>{
+    const v = $("#"+k).val().trim();
+    if(v) utms[k]=v;
+  });
+  const analytics = {
+    type: $("#analytics_type").val(),
+    value: $("#analytics_value").val().trim()
+  };
+  const slug = $("#slug").val().trim();
+  return { stores, utms, analytics, slug, created_at: nowIso() };
+}
+
+function atLeastOneStore(stores){ return Object.values(stores).some(v=>v && v.length>0); }
+
+function saveLocal(name, payload){
+  const saved = JSON.parse(localStorage.getItem("sl_configs")||"{}");
+  saved[name] = payload;
+  localStorage.setItem("sl_configs", JSON.stringify(saved));
+}
+
+function showSaved(){
+  const saved = JSON.parse(localStorage.getItem("sl_configs")||"{}");
+  const $out = $("#savedList").empty();
+  const keys = Object.keys(saved);
+  if(keys.length===0){ $out.text("No saved configs in browser (you can Export after creating)."); return; }
+  keys.forEach(k=>{
+    const row = $("<div>").addClass("d-flex align-items-center gap-2 mb-1");
+    row.append($("<div>").text(k).css({"fontFamily":"monospace","minWidth":"180px"}));
+    const openBtn = $("<button>").addClass("btn btn-sm btn-outline-primary").text("Open");
+    openBtn.on("click",()=> {
+      const payload = saved[k];
+      const encoded = b64urlEncode(JSON.stringify(payload));
+      const u = location.origin + location.pathname + "#/r/" + encoded;
+      window.open(u,"_blank");
+    });
+    const shortBtn = $("<button>").addClass("btn btn-sm btn-outline-success").text("Open short");
+    shortBtn.on("click",()=> {
+      const payload = saved[k];
+      // open slug if exists
+      const slugName = payload.slug || k;
+      const u = location.origin + location.pathname + "#/s/" + encodeURIComponent(slugName);
+      window.open(u,"_blank");
+    });
+    const delBtn = $("<button>").addClass("btn btn-sm btn-outline-danger").text("Delete");
+    delBtn.on("click", ()=> {
+      if(!confirm("Delete this saved config?")) return;
+      delete saved[k];
+      localStorage.setItem("sl_configs", JSON.stringify(saved));
+      showSaved();
+    });
+    row.append(openBtn, shortBtn, delBtn);
+    $out.append(row);
+  });
+}
+
+/* ----------------------------------------
+  Platform detection & redirect helpers
+-----------------------------------------*/
+function detectPlatform(){
+  const ua = navigator.userAgent || navigator.vendor || "";
+  if(/ipad|iphone|ipod/i.test(ua) && !/android/i.test(ua)) return "apple";
+  if(/huawei/i.test(ua)) return "huawei";
+  if(/samsung/i.test(ua)) return "samsung";
+  if(/android/i.test(ua)) return "google";
+  if(/windows phone/i.test(ua)) return "microsoft";
+  if(/windows/i.test(ua) && /touch/.test(ua)) return "microsoft";
+  return "web";
+}
+
+function appendUtmsToUrl(url, utms){
+  try{
+    const u = new URL(url);
+    for(const k in utms) if(utms[k]) u.searchParams.set(k, utms[k]);
+    return u.toString();
+  }catch(e){ return url; }
+}
+
+/* ----------------------------------------
+  Analytics injector for redirect page
+-----------------------------------------*/
+function injectAnalytics(analytics){
+  if(!analytics || !analytics.type) return;
+  const t = analytics.type;
+  const v = analytics.value;
+  if(t==="plausible" && v){
+    const s = document.createElement("script"); s.defer = true; s.setAttribute("data-domain", v);
+    s.src = "https://plausible.io/js/script.js"; document.head.appendChild(s);
+  } else if(t==="ga4" && v){
+    const id = v;
+    const s1 = document.createElement("script"); s1.async = true;
+    s1.src = "https://www.googletagmanager.com/gtag/js?id="+id; document.head.appendChild(s1);
+    const s2 = document.createElement("script"); s2.text = "window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','"+id+"');"; document.head.appendChild(s2);
+  } else if(t==="umami" && v){
+    const parts = v.split("|");
+    if(parts.length===2){ const src = parts[0]; const id = parts[1]; const s = document.createElement("script"); s.defer = true; s.dataset.websiteId = id; s.src = src; document.head.appendChild(s); }
+  } else if(t==="custom" && v){
+    const s = document.createElement("script"); s.defer = true; s.src = v; document.head.appendChild(s);
+  }
+}
+
+/* ----------------------------------------
+  Create store badge elements (preview)
+-----------------------------------------*/
+function storeBadge(kind){
+  // quick badge boxes (no external images required)
+  const labels = {
+    apple: ["<i class='bi bi-apple'></i>", "App Store"],
+    google: ["<i class='bi bi-android2'></i>", "Google Play"],
+    huawei: ["<i class='bi bi-phone'></i>", "Huawei"],
+    samsung: ["<i class='bi bi-phone'></i>", "Samsung"],
+    amazon: ["<i class='bi bi-bag-heart'></i>", "Amazon"],
+    microsoft: ["<i class='bi bi-windows'></i>", "Microsoft"],
+    apkpure: ["<i class='bi bi-box-seam'></i>", "APK"],
+    web: ["<i class='bi bi-globe'></i>", "Website"]
+  };
+  const lab = labels[kind] || ["<i class='bi bi-link-45deg'></i>", kind];
+  const $b = $("<a>").addClass("badge-btn").attr("target","_blank").attr("rel","noopener").html(lab[0] + "<span style='font-size:13px'>" + lab[1] + "</span>");
+  return $b;
+}
+
+/* ----------------------------------------
+  Google Apps Script integration (slug store)
+-----------------------------------------*/
+async function saveToAppsScript(endpoint, slug, payload){
+  // endpoint: google apps script base URL (doGet/doPost)
+  // We'll POST JSON: {action:"save", slug, payload}
+  // Apps Script returns JSON: {ok:true, slug:"..."} or {ok:false, error:"..."}
+  try{
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      mode: "cors",
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({action:"save", slug, payload})
+    });
+    if(!resp.ok) throw new Error("Network error "+resp.status);
+    const j = await resp.json();
+    return j;
+  }catch(err){ return {ok:false, error:err.message}; }
+}
+
+async function fetchFromAppsScript(endpoint, slug){
+  try{
+    const url = new URL(endpoint);
+    url.searchParams.set("action","get");
+    url.searchParams.set("slug", slug);
+    const resp = await fetch(url.toString(), {method:"GET", mode:"cors"});
+    if(!resp.ok) throw new Error("Network error "+resp.status);
+    const j = await resp.json();
+    return j;
+  }catch(err){ return {ok:false, error:err.message}; }
+}
+
+/* ----------------------------------------
+  Router: builder or redirect modes
+-----------------------------------------*/
+$(function(){
+  // clipboard
+  new ClipboardJS('#copyBtn', { text: function(){ return $("#finalUrl").text(); } });
+
+  showSaved();
+
+  $("#btnSelf").on("click", function(){
+    const payload = buildPayload();
+    if(!atLeastOneStore(payload.stores)){ alert("Please provide at least one store or web link."); return; }
+    const name = payload.slug || ("link-"+Date.now());
+    saveLocal(name, payload);
+    showSaved();
+
+    const encoded = b64urlEncode(JSON.stringify(payload));
+    const url = location.origin + location.pathname + "#/r/" + encoded;
+    $("#finalUrl").text(url); $("#genArea").show(); $("#qrArea").hide();
+  });
+
+  $("#btnSaveSlug").on("click", async function(){
+    const endpoint = $("#appsScriptEndpoint").val().trim();
+    if(!endpoint){ alert("Paste your Apps Script Web App URL into the field before saving."); return; }
+    const payload = buildPayload();
+    if(!atLeastOneStore(payload.stores)){ alert("Please provide at least one store or web link."); return; }
+    const slugCandidate = $("#slug").val().trim() || ("link-"+Date.now());
+    // Save locally too
+    saveLocal(slugCandidate, payload); showSaved();
+
+    // Ask Apps Script to save
+    $(this).prop("disabled",true).text("Saving...");
+    const res = await saveToAppsScript(endpoint, slugCandidate, payload);
+    $(this).prop("disabled",false).text("Save to Slug (Google Sheet)");
+    if(!res.ok){ alert("Save failed: " + (res.error||"unknown")); return; }
+    // result contains slug (maybe modified)
+    const final = location.origin + location.pathname + "#/s/" + encodeURIComponent(res.slug);
+    $("#finalUrl").text(final); $("#genArea").show(); $("#qrArea").hide();
+  });
+
+  $("#btnExport").on("click", function(){
+    const saved = JSON.parse(localStorage.getItem("sl_configs")||"{}");
+    const blob = new Blob([JSON.stringify(saved, null, 2)], {type:'application/json'});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "smartlinks.json"; document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  $("#btnImport").on("click", function(){
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "application/json";
+    inp.onchange = e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try{ const obj = JSON.parse(r.result); const existing = JSON.parse(localStorage.getItem("sl_configs")||"{}"); Object.assign(existing, obj); localStorage.setItem("sl_configs", JSON.stringify(existing)); showSaved(); alert("Imported."); }catch(err){ alert("Invalid JSON."); }
+      }; r.readAsText(f);
+    };
+    inp.click();
+  });
+
+  $("#btnClear").on("click", function(){ if(!confirm("Clear the form?")) return; $("#slug,#link-apple,#link-google,#link-huawei,#link-samsung,#link-amazon,#link-microsoft,#link-apkpure,#link-web,#utm_source,#utm_medium,#utm_campaign,#utm_term,#utm_content,#analytics_value").val(""); $("#analytics_type").val(""); });
+
+  $("#openBtn").on("click", function(){ const u = $("#finalUrl").text().trim(); if(u) window.open(u,"_blank"); });
+  $("#qrBtn").on("click", function(){
+    const u = $("#finalUrl").text().trim();
+    if(!u){ alert("Generate a link first."); return; }
+    $("#qrArea").show().empty();
+    QRCode.toDataURL(u, {width:200}).then(src => {
+      const img = $("<img>").attr("src", src).css({height:200});
+      $("#qrArea").append(img);
+    }).catch(err => { alert("Could not generate QR: "+err); });
+  });
+
+  $("#btnGuide").on("click", function(){
+    alert("Apps Script Setup guide will open: scroll down the page to the 'Apps Script' section in the docs (or use the guide link provided next)."); 
+    window.open('#apps-script-guide','_self');
+  });
+
+  // ROUTER
+  function route(){
+    const h = location.hash || "";
+    if(!h || h==="#" || h.startsWith("#/builder")){
+      $("#ui-builder").show(); $("#ui-redirect").hide(); return;
+    }
+    // Self-contained: #/r/<encoded>
+    if(h.startsWith("#/r/")){
+      $("#ui-builder").hide(); $("#ui-redirect").show();
+      const enc = h.slice(4); const json = b64urlDecode(enc);
+      if(!json){ $("#redirectMsg").text("Invalid payload."); return; }
+      let payload;
+      try{ payload = JSON.parse(json); }catch(e){ $("#redirectMsg").text("Invalid payload JSON."); return; }
+      // inject analytics, show badges
+      injectAnalytics(payload.analytics);
+      showPreviewBadges(payload.stores);
+      performRedirect(payload);
+      return;
+    }
+    // Short slug mode: #/s/<slug>
+    if(h.startsWith("#/s/")){
+      $("#ui-builder").hide(); $("#ui-redirect").show();
+      const slug = decodeURIComponent(h.slice(4));
+      const endpoint = $("#appsScriptEndpoint").val().trim();
+      if(!endpoint){ $("#redirectMsg").text("Slug mode requires you to paste the Apps Script endpoint in the builder field (only once)."); return; }
+      $("#redirectMsg").text("Fetching configuration for slug: " + slug);
+      fetchFromAppsScript(endpoint, slug).then(resp=>{
+        if(!resp.ok){ $("#redirectMsg").text("Could not load slug: " + (resp.error || resp.msg || 'unknown')); return; }
+        const payload = resp.payload;
+        if(!payload){ $("#redirectMsg").text("Slug not found."); return; }
+        injectAnalytics(payload.analytics);
+        showPreviewBadges(payload.stores);
+        performRedirect(payload);
+      });
+      return;
+    }
+    // Unknown hash fall back to builder
+    $("#ui-builder").show(); $("#ui-redirect").hide();
+  }
+
+  function showPreviewBadges(stores){
+    $("#previewBadges").empty();
+    const keys = ["apple","google","huawei","samsung","amazon","microsoft","apkpure","web"];
+    const $wrap = $("<div>").addClass("preview-badges");
+    for(const k of keys){
+      if(stores[k]){
+        const $b = storeBadge(k);
+        $b.attr("href", appendUtmsToUrl(stores[k], {}));
+        $wrap.append($b);
+      }
+    }
+    $("#previewBadges").append($wrap);
+  }
+
+  function performRedirect(payload){
+    const pf = detectPlatform();
+    const stores = payload.stores || {};
+    let target = stores[pf] || null;
+    const fallbackOrder = {
+      apple: ["google","huawei","samsung","amazon","apkpure","web","microsoft"],
+      google: ["huawei","samsung","apkpure","amazon","web","microsoft","apple"],
+      huawei: ["apkpure","google","web","amazon","samsung","apple"],
+      samsung: ["google","apkpure","web","amazon","huawei","apple"],
+      microsoft: ["web","microsoft","apkpure","google"],
+      web: ["web","google","apple","apkpure"]
+    };
+    if(!target){
+      const order = fallbackOrder[pf] || ["web","google","apple","apkpure"];
+      for(const k of order) if(stores[k]) { target = stores[k]; break; }
+    }
+    if(!target){ $("#redirectMsg").text("No destination configured for this link."); return; }
+
+    // merge UTMs: payload.utms + any utm in current query string
+    const currQs = new URLSearchParams(location.search);
+    const mergedUtms = Object.assign({}, payload.utms || {});
+    for(const [k,v] of currQs.entries()) if(k.startsWith("utm_")) mergedUtms[k] = v;
+    const final = appendUtmsToUrl(target, mergedUtms);
+
+    $("#redirectTitle").text("Opening " + (payload.slug || "app") + "...");
+    $("#manualTarget").attr("href", final).text(final);
+
+    // wait briefly so analytics can fire, then redirect
+    setTimeout(()=>{ location.href = final; }, 700);
+  }
+
+  // respond to hashchange
+  $(window).on("hashchange", route);
+  route();
+});
+</script>
+
+<!-- Apps Script setup guide anchor (opens a new tab with exact steps below for copy/paste) -->
+<div style="display:none">
+  <a id="apps-script-guide" href="#"></a>
+</div>
+
+</body>
+</html>
