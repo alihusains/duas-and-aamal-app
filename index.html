@@ -76,9 +76,9 @@ function showSaved(){
     const row=$("<div>").addClass("d-flex align-items-center gap-2 mb-1");
     row.append($("<div>").text(k).css({"fontFamily":"monospace","minWidth":"180px"}));
     const openBtn=$("<button>").addClass("btn btn-sm btn-outline-primary").text("Open");
-    openBtn.on("click",()=>{ const payload=saved[k]; const encoded=b64urlEncode(JSON.stringify(payload)); window.open(location.origin+location.pathname+"#/r/"+encoded,"_blank"); });
+    openBtn.on("click",()=>{ const payload=saved[k]; const encoded=b64urlEncode(JSON.stringify(payload)); window.open(window.location.href.replace(window.location.hash, '')+"#/r/"+encoded,"_blank"); });
     const shortBtn=$("<button>").addClass("btn btn-sm btn-outline-success").text("Open short");
-    shortBtn.on("click",()=>{ const payload=saved[k]; const slugName=payload.slug||k; window.open(location.origin+location.pathname+"#/s/"+encodeURIComponent(slugName),"_blank"); });
+    shortBtn.on("click",()=>{ const payload=saved[k]; const slugName=payload.slug||k; window.open(window.location.href.replace(window.location.hash, '')+"#/s/"+encodeURIComponent(slugName),"_blank"); });
     const delBtn=$("<button>").addClass("btn btn-sm btn-outline-danger").text("Delete");
     delBtn.on("click",()=>{ if(!confirm("Delete this saved config?")) return; delete saved[k]; localStorage.setItem("sl_configs",JSON.stringify(saved)); showSaved(); });
     row.append(openBtn,shortBtn,delBtn);
