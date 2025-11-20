@@ -24,7 +24,101 @@
 </head>
 <body>
   <div class="card">
-    <!-- ... keep all builder UI unchanged ... -->
+    <h2 class="mb-3">Smart Link Builder</h2>
+    <form id="builderForm" autocomplete="off">
+      <div class="row">
+        <div class="col-md-6">
+          <label class="form-label">Apple App Store</label>
+          <input type="url" class="form-control store-input" id="link-apple" placeholder="https://apps.apple.com/..." />
+          <label class="form-label">Google Play Store</label>
+          <input type="url" class="form-control store-input" id="link-google" placeholder="https://play.google.com/..." />
+          <label class="form-label">Huawei AppGallery</label>
+          <input type="url" class="form-control store-input" id="link-huawei" placeholder="https://appgallery.huawei.com/..." />
+          <label class="form-label">Samsung Galaxy Store</label>
+          <input type="url" class="form-control store-input" id="link-samsung" placeholder="https://galaxystore.samsung.com/..." />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Amazon Appstore</label>
+          <input type="url" class="form-control store-input" id="link-amazon" placeholder="https://www.amazon.com/..." />
+          <label class="form-label">Microsoft Store</label>
+          <input type="url" class="form-control store-input" id="link-microsoft" placeholder="https://www.microsoft.com/..." />
+          <label class="form-label">APKPure</label>
+          <input type="url" class="form-control store-input" id="link-apkpure" placeholder="https://apkpure.com/..." />
+          <label class="form-label">Web / Website</label>
+          <input type="url" class="form-control store-input" id="link-web" placeholder="https://yourwebsite.com/..." />
+        </div>
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-md-4">
+          <label class="form-label">UTM Source</label>
+          <input type="text" class="form-control" id="utm_source" placeholder="e.g. newsletter" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">UTM Medium</label>
+          <input type="text" class="form-control" id="utm_medium" placeholder="e.g. email" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">UTM Campaign</label>
+          <input type="text" class="form-control" id="utm_campaign" placeholder="e.g. spring_launch" />
+        </div>
+      </div>
+      <div class="row mt-2">
+        <div class="col-md-6">
+          <label class="form-label">UTM Term</label>
+          <input type="text" class="form-control" id="utm_term" placeholder="e.g. keyword" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">UTM Content</label>
+          <input type="text" class="form-control" id="utm_content" placeholder="e.g. banner" />
+        </div>
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-md-6">
+          <label class="form-label">Analytics Type</label>
+          <select class="form-select" id="analytics_type">
+            <option value="">None</option>
+            <option value="plausible">Plausible</option>
+            <option value="ga4">Google Analytics 4</option>
+            <option value="umami">Umami</option>
+            <option value="custom">Custom Script</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Analytics Value</label>
+          <input type="text" class="form-control" id="analytics_value" placeholder="e.g. domain.com or GA4 ID" />
+        </div>
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-md-8">
+          <label class="form-label">Custom Slug</label>
+          <input type="text" class="form-control" id="slug" placeholder="e.g. myapp" />
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+          <button type="button" class="btn btn-primary w-100" id="buildBtn">Build Link</button>
+        </div>
+      </div>
+    </form>
+    <hr>
+    <div>
+      <label class="form-label">Resulting Smart Link</label>
+      <div class="d-flex align-items-center mb-2">
+        <span class="result-box flex-grow-1" id="finalUrl" style="min-height:32px;min-width:0;overflow-x:auto;white-space:nowrap;"></span>
+        <button class="btn btn-outline-secondary ms-2" id="copyBtn" title="Copy to clipboard"><i class="bi bi-clipboard"></i></button>
+      </div>
+      <div id="qrcode"></div>
+    </div>
+    <hr>
+    <div>
+      <label class="form-label">Saved Configurations</label>
+      <div id="savedList" class="mb-2"></div>
+    </div>
+    <footer class="small text-center mt-4">
+      &copy; 2025 Smart Link Builder. Powered by Google Apps Script.
+    </footer>
+  </div>
 
 <!-- CDN JS -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
@@ -143,7 +237,25 @@ function fetchFromAppsScript(endpoint,slug){
 $(function(){
   new ClipboardJS('#copyBtn',{text:()=>$("#finalUrl").text()});
   showSaved();
-  // ... rest of your existing event handlers ...
+
+  // Build Link button handler
+  $("#buildBtn").on("click", function(e) {
+    e.preventDefault();
+    const payload = buildPayload();
+    if (!atLeastOneStore(payload.stores)) {
+      alert("Please enter at least one store link.");
+      return;
+    }
+    const encoded = b64urlEncode(JSON.stringify(payload));
+    const url = window.location.origin + window.location.pathname + "#/r/" + encoded;
+    $("#finalUrl").text(url);
+    if (window.QRCode) {
+      $("#qrcode").empty();
+      new QRCode(document.getElementById("qrcode"), { text: url, width: 120, height: 120 });
+    }
+    saveLocal(payload.slug || nowIso(), payload);
+    showSaved();
+  });
 });
 </script>
 </body>
